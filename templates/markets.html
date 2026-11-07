@@ -1,0 +1,74 @@
+{% extends 'base_trader.html' %}
+{% block title %}Fast Traders | استكشاف الأسواق{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap justify-between items-center mb-8 pb-5 border-b border-white/10 gap-4">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-black">استكشاف الأسواق وصلاحيات الأزواج</h1>
+        <p class="text-xs text-gray-400 mt-1">
+            إجمالي إيداعك المعتمد: <b class="text-[#00ECB9]">${{ request.user.total_deposited|floatformat:2 }}</b> (يحدد الأزواج المفتوحة لحسابك)
+        </p>
+    </div>
+    <input id="searchMarket" oninput="filterMarkets()" type="text" placeholder="ابحث عن أصل (EUR/USD, BTC...)" class="bg-[#121824] border border-white/15 rounded-xl px-4 py-2.5 text-xs w-full sm:w-72 outline-none focus:border-[#00ECB9]">
+</div>
+
+<div class="bg-[#121824] border border-white/10 rounded-2xl p-4 sm:p-6 overflow-x-auto">
+    <table class="w-full text-right text-sm min-w-[650px]">
+        <thead class="text-xs text-gray-400 border-b border-white/10">
+            <tr>
+                <th class="pb-4">الأصل المالي</th>
+                <th class="pb-4">الفئة</th>
+                <th class="pb-4">نسبة الربحية (Payout)</th>
+                <th class="pb-4">الحد الأدنى للإيداع لفك القفل</th>
+                <th class="pb-4">حالة الزوج لحسابك</th>
+                <th class="pb-4">الإجراء</th>
+            </tr>
+        </thead>
+        <tbody id="marketsTable" class="divide-y divide-white/5">
+            {% for item in market_list %}
+            <tr class="market-row" data-search="{{ item.asset.symbol|lower }} {{ item.asset.name|lower }} {{ item.asset.category|lower }}">
+                <td class="py-4 font-black text-base">
+                    {{ item.asset.symbol }}
+                    <span class="text-xs text-gray-400 font-normal block">{{ item.asset.name }}</span>
+                </td>
+                <td><span class="px-2.5 py-1 rounded bg-white/5 text-xs">{{ item.asset.category }}</span></td>
+                <td><span class="px-3 py-1 rounded-lg bg-[#00ECB9]/15 text-[#00ECB9] font-black text-xs">+{{ item.asset.payout }}%</span></td>
+                <td class="font-bold text-[#F0B90B]">${{ item.asset.min_deposit|floatformat:0 }}</td>
+                <td>
+                    {% if item.asset.locked_by_admin %}
+                        <span class="text-xs text-red-400 font-bold"><i class="fa-solid fa-lock ml-1"></i> مقفول من الإدارة</span>
+                    {% elif item.is_unlocked %}
+                        <span class="text-xs text-[#00ECB9] font-bold"><i class="fa-solid fa-lock-open ml-1"></i> مفتوح للتداول ✓</span>
+                    {% else %}
+                        <span class="text-xs text-[#F0B90B] font-bold"><i class="fa-solid fa-lock ml-1"></i> مقفول (يتطلب إيداع ${{ item.asset.min_deposit|floatformat:0 }})</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.is_unlocked %}
+                        <a href="{% url 'terminal' %}?symbol={{ item.asset.symbol }}" class="inline-block px-4 py-2 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-xs hover:opacity-90">تداول الآن</a>
+                    {% else %}
+                        <a href="{% url 'wallet' %}" class="inline-block px-4 py-2 rounded-xl bg-[#F0B90B]/20 text-[#F0B90B] border border-[#F0B90B]/40 font-bold text-xs hover:bg-[#F0B90B]/30">إيداع لفك القفل</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="py-6 text-center text-gray-500 text-xs">لا توجد أزواج مالية مضافة حالياً.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filterMarkets() {
+        const q = document.getElementById('searchMarket').value.toLowerCase().trim();
+        document.querySelectorAll('.market-row').forEach(row => {
+            const text = row.getAttribute('data-search') || '';
+            row.style.display = text.includes(q) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

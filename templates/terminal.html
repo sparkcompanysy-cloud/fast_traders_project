@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Traders | تيرمنال التداول اللحظي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>body { font-family: 'Cairo', sans-serif; background-color: #0B0E14; color: #fff; overflow-x: hidden; }</style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row">
+
+    <div id="toast" class="fixed top-5 left-5 z-50 hidden"></div>
+
+    <!-- Mobile Top Navigation Bar -->
+    <header class="lg:hidden bg-[#121824] border-b border-white/10 px-4 py-3 flex justify-between items-center shrink-0">
+        <a href="{% url 'dashboard' %}" class="text-[#F0B90B] text-xl"><i class="fa-solid fa-caret-up"></i></a>
+        <div class="flex items-center gap-2">
+            <span id="mobileActiveBal" class="text-xs font-black text-[#00ECB9]">${{ request.user.real_balance|floatformat:2 }}</span>
+            <a href="{% url 'dashboard' %}" class="text-gray-400 text-sm"><i class="fa-solid fa-chart-pie"></i></a>
+            <a href="{% url 'wallet' %}" class="text-xs px-3 py-1.5 rounded-lg bg-[#00ECB9] text-[#0B0E14] font-black">إيداع</a>
+        </div>
+    </header>
+
+    <!-- Desktop Sidebar -->
+    <aside class="hidden lg:flex w-16 bg-[#121824] border-l border-white/10 flex-col items-center py-5 justify-between shrink-0 h-screen">
+        <a href="{% url 'dashboard' %}" class="text-[#F0B90B] text-2xl" title="الرئيسية"><i class="fa-solid fa-bolt"></i></a>
+        <nav class="flex flex-col gap-6 text-lg text-gray-400">
+            <a href="{% url 'dashboard' %}" title="لوحة التحكم" class="hover:text-[#00ECB9]"><i class="fa-solid fa-chart-pie"></i></a>
+            <a href="{% url 'terminal' %}" title="التيرمنال" class="text-[#00ECB9]"><i class="fa-solid fa-chart-line"></i></a>
+            <a href="{% url 'markets' %}" title="الأسواق" class="hover:text-[#00ECB9]"><i class="fa-solid fa-globe"></i></a>
+            <a href="{% url 'wallet' %}" title="المحفظة" class="hover:text-[#00ECB9]"><i class="fa-solid fa-wallet"></i></a>
+            <a href="{% url 'kyc' %}" title="توثيق الهوية" class="hover:text-[#00ECB9]"><i class="fa-solid fa-id-card"></i></a>
+        </nav>
+        <a href="{% url 'logout' %}" class="text-red-400" title="خروج"><i class="fa-solid fa-power-off"></i></a>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-h-screen lg:h-screen">
+        <!-- Top Asset & Balance Header -->
+        <header class="bg-[#121824] border-b border-white/10 px-4 sm:px-6 py-3 flex flex-wrap justify-between items-center gap-3 shrink-0">
+            <div class="flex flex-wrap items-center gap-3">
+                <select id="assetSelect" onchange="changeAsset()" class="bg-[#0B0E14] border border-white/15 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold outline-none focus:border-[#00ECB9]">
+                    {% for a in assets %}
+                    <option value="{{ a.id }}" data-payout="{{ a.payout }}" data-min-dep="{{ a.min_deposit }}" data-locked="{{ a.locked_by_admin|yesno:'true,false' }}" data-price="{{ a.base_price }}" {% if forloop.first %}selected{% endif %}>
+                        {{ a.symbol }} (+{{ a.payout }}%)
+                    </option>
+                    {% endfor %}
+                </select>
+                <span id="payoutBadge" class="px-3 py-1 rounded-lg bg-[#00ECB9]/15 text-[#00ECB9] font-black text-xs">+92% العائد</span>
+                <span id="lockBadge" class="px-3 py-1 rounded-lg text-xs font-bold hidden sm:inline-block"></span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <select id="accType" onchange="updateHeaderBalance()" class="bg-[#0B0E14] border border-white/15 rounded-xl px-3 py-1.5 text-xs font-bold text-[#00ECB9] outline-none">
+                    <option value="real">الحساب الحقيقي (Real)</option>
+                    <option value="demo">الحساب التجريبي (Demo)</option>
+                </select>
+                <div class="bg-[#0B0E14] border border-white/10 px-3 sm:px-4 py-1.5 rounded-xl">
+                    <span class="text-[10px] text-gray-400 block">الرصيد المتاح</span>
+                    <b id="activeBalance" class="text-xs sm:text-sm text-[#00ECB9]">${{ request.user.real_balance|floatformat:2 }}</b>
+                </div>
+                <div class="bg-[#0B0E14] border border-white/10 px-3 sm:px-4 py-1.5 rounded-xl hidden sm:block">
+                    <span class="text-[10px] text-gray-400 block">صافي ربح اليوم</span>
+                    <b id="dailyProfitTop" class="text-xs sm:text-sm {% if request.user.daily_profit >= 0 %}text-[#00ECB9]{% else %}text-red-400{% endif %}">
+                        {% if request.user.daily_profit >= 0 %}+${{ request.user.daily_profit|floatformat:2 }}{% else %}-${{ request.user.daily_profit|floatformat:2|cut:"-" }}{% endif %}
+                    </b>
+                </div>
+                <a href="{% url 'wallet' %}" class="px-3 sm:px-4 py-2 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-xs">إيداع فوري</a>
+            </div>
+        </header>
+
+        <!-- Chart + Order Panel (Responsive Split / Stack) -->
+        <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <div class="flex-1 bg-[#080B10] relative flex flex-col min-h-[300px] lg:min-h-0">
+                <div class="absolute top-4 right-4 z-10 flex items-center gap-3 bg-[#121824]/90 border border-white/10 px-4 py-2 rounded-xl">
+                    <span class="w-2 h-2 rounded-full bg-[#00ECB9] animate-ping"></span>
+                    <span id="livePriceText" class="font-mono font-black text-base sm:text-lg text-[#00ECB9]">1.08450</span>
+                </div>
+                <canvas id="chartCanvas" class="w-full flex-1"></canvas>
+            </div>
+
+            <!-- Trading Controls Sidebar -->
+            <div class="w-full lg:w-80 bg-[#121824] border-t lg:border-t-0 lg:border-r border-white/10 p-4 sm:p-5 flex flex-col justify-between shrink-0 space-y-4">
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">مدة الصفقة</label>
+                        <div class="grid grid-cols-4 gap-2 text-xs font-bold">
+                            <button type="button" onclick="setDuration(3, this)" class="dur-btn py-2 rounded-lg bg-[#0B0E14] border border-[#00ECB9] text-[#00ECB9]">3 ث</button>
+                            <button type="button" onclick="setDuration(5, this)" class="dur-btn py-2 rounded-lg bg-[#0B0E14] border border-white/10">5 ث</button>
+                            <button type="button" onclick="setDuration(15, this)" class="dur-btn py-2 rounded-lg bg-[#0B0E14] border border-white/10">15 ث</button>
+                            <button type="button" onclick="setDuration(30, this)" class="dur-btn py-2 rounded-lg bg-[#0B0E14] border border-white/10">30 ث</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-2">مبلغ الضربة / الصفقة ($)</label>
+                        <input id="tradeAmount" type="number" value="10" min="1" oninput="calcReturn()" class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-4 py-2.5 font-black text-base outline-none focus:border-[#00ECB9]">
+                        <div class="grid grid-cols-4 gap-2 mt-2 text-xs font-bold">
+                            <button type="button" onclick="setAmt(10)" class="py-1.5 rounded bg-[#0B0E14] border border-white/10 hover:border-[#00ECB9]">$10</button>
+                            <button type="button" onclick="setAmt(20)" class="py-1.5 rounded bg-[#0B0E14] border border-white/10 hover:border-[#00ECB9]">$20</button>
+                            <button type="button" onclick="setAmt(50)" class="py-1.5 rounded bg-[#0B0E14] border border-white/10 hover:border-[#00ECB9]">$50</button>
+                            <button type="button" onclick="setAmt(100)" class="py-1.5 rounded bg-[#0B0E14] border border-white/10 hover:border-[#00ECB9]">$100</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#0B0E14] border border-white/10 rounded-xl p-3 space-y-1 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">الربح الصافي للصفقة:</span>
+                            <b id="netProfitTxt" class="text-sm text-[#00ECB9]">+$9.20</b>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">إجمالي العائد مع رأس المال:</span>
+                            <b id="expectedReturn" class="text-sm text-white">$19.20</b>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 lg:grid-cols-1 gap-3 pt-2">
+                        <button type="button" onclick="placeTrade('CALL')" class="w-full py-3.5 sm:py-4 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-sm sm:text-base flex justify-between px-4 sm:px-5 items-center hover:opacity-90 transition shadow-lg shadow-[#00ECB9]/20">
+                            <span>صعود / CALL</span> <i class="fa-solid fa-arrow-trend-up text-lg"></i>
+                        </button>
+                        <button type="button" onclick="placeTrade('PUT')" class="w-full py-3.5 sm:py-4 rounded-xl bg-[#FF4D4D] text-white font-black text-sm sm:text-base flex justify-between px-4 sm:px-5 items-center hover:opacity-90 transition shadow-lg shadow-[#FF4D4D]/20">
+                            <span>هبوط / PUT</span> <i class="fa-solid fa-arrow-trend-down text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-[11px] text-gray-500 border-t border-white/10 pt-3 hidden lg:block">
+                    <i class="fa-solid fa-shield-halved text-[#F0B90B] ml-1"></i> تنفيذ فوري عبر خادم Fast Traders الآمن.
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Trades Log Footer -->
+        <footer class="h-32 bg-[#121824] border-t border-white/10 px-4 sm:px-6 py-3 overflow-y-auto shrink-0">
+            <h4 class="text-xs font-bold text-gray-400 mb-2">سجل الصفقات اللحظية والنشطة</h4>
+            <div id="tradesLog" class="space-y-1.5 text-xs"></div>
+        </footer>
+    </div>
+
+    <script>
+        const REAL_BALANCE_INIT = Number("{{ request.user.real_balance }}");
+        const DEMO_BALANCE_INIT = Number("{{ request.user.demo_balance }}");
+        const TOTAL_DEPOSITED = Number("{{ request.user.total_deposited }}");
+
+        let currentAsset = null;
+        let duration = 3;
+        let candles = [];
+        let currentPrice = 1.08450;
+        let activeTradeBias = 0;
+
+        function toast(msg, isErr = false) {
+            const t = document.getElementById('toast');
+            t.className = `fixed top-5 left-5 z-50 px-5 py-3 rounded-xl font-bold text-xs shadow-2xl flex items-center gap-2 ${isErr ? 'bg-[#FF4D4D] text-white' : 'bg-[#00ECB9] text-[#0B0E14]'}`;
+            t.innerHTML = `<i class="fa-solid ${isErr ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${msg}`;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 3200);
+        }
+
+        function changeAsset() {
+            const sel = document.getElementById('assetSelect');
+            const opt = sel.options[sel.selectedIndex];
+            currentAsset = {
+                id: opt.value,
+                symbol: opt.text.split(' ')[0],
+                payout: Number(opt.getAttribute('data-payout')),
+                minDeposit: Number(opt.getAttribute('data-min-dep')),
+                locked: opt.getAttribute('data-locked') === 'true',
+                price: Number(opt.getAttribute('data-price')) || 1.08450
+            };
+
+            document.getElementById('payoutBadge').innerText = `+${currentAsset.payout}% العائد`;
+            const lb = document.getElementById('lockBadge');
+            if (currentAsset.locked) {
+                lb.innerText = '🔒 مقفول من الإدارة';
+                lb.className = 'px-3 py-1 rounded-lg bg-red-500/20 text-red-400 text-xs font-bold';
+            } else if (TOTAL_DEPOSITED < currentAsset.minDeposit) {
+                lb.innerText = `🔒 يتطلب إيداع $${currentAsset.minDeposit}`;
+                lb.className = 'px-3 py-1 rounded-lg bg-[#F0B90B]/20 text-[#F0B90B] text-xs font-bold';
+            } else {
+                lb.innerText = '🔓 مفتوح للتداول';
+                lb.className = 'px-3 py-1 rounded-lg bg-[#00ECB9]/15 text-[#00ECB9] text-xs font-bold';
+            }
+
+            currentPrice = currentAsset.price;
+            initCandles();
+            calcReturn();
+        }
+
+        function updateHeaderBalance() {
+            // Balances are updated via AJAX response after trades, but can be formatted here
+            calcReturn();
+        }
+
+        function setDuration(sec, btn) {
+            duration = sec;
+            document.querySelectorAll('.dur-btn').forEach(b => b.className = 'dur-btn py-2 rounded-lg bg-[#0B0E14] border border-white/10');
+            btn.className = 'dur-btn py-2 rounded-lg bg-[#0B0E14] border border-[#00ECB9] text-[#00ECB9]';
+        }
+
+        function setAmt(val) {
+            document.getElementById('tradeAmount').value = val;
+            calcReturn();
+        }
+
+        function calcReturn() {
+            if (!currentAsset) return;
+            const amt = Number(document.getElementById('tradeAmount').value) || 0;
+            const profit = amt * (currentAsset.payout / 100);
+            document.getElementById('netProfitTxt').innerText = '+$' + profit.toFixed(2);
+            document.getElementById('expectedReturn').innerText = '$' + (amt + profit).toFixed(2);
+        }
+
+        function placeTrade(dir) {
+            if (!currentAsset) return;
+            const amt = Number(document.getElementById('tradeAmount').value);
+            const accType = document.getElementById('accType').value;
+
+            if (currentAsset.locked) return toast(`زوج ${currentAsset.symbol} مقفول من الإدارة!`, true);
+            if (accType === 'real' && TOTAL_DEPOSITED < currentAsset.minDeposit) {
+                return toast(`يتطلب إيداعاً لا يقل عن $${currentAsset.minDeposit} للتداول على هذا الزوج.`, true);
+            }
+
+            // Send trade execution to Django Backend API
+            fetch("{% url 'execute_trade_api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    asset_id: currentAsset.id,
+                    direction: dir,
+                    amount: amt,
+                    duration: duration,
+                    account_type: accType
+                })
+            })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(response => {
+                if (!response.body.success) {
+                    return toast(response.body.error || 'حدث خطأ أثناء تنفيذ الصفقة.', true);
+                }
+
+                const data = response.body;
+                // Update header balances
+                if (accType === 'real') {
+                    document.getElementById('activeBalance').innerText = '$' + data.new_real_balance.toFixed(2);
+                    document.getElementById('mobileActiveBal').innerText = '$' + data.new_real_balance.toFixed(2);
+                } else {
+                    document.getElementById('activeBalance').innerText = '$' + data.new_demo_balance.toFixed(2);
+                }
+
+                const dpEl = document.getElementById('dailyProfitTop');
+                dpEl.innerText = (data.new_daily_profit >= 0 ? '+$' : '-$') + Math.abs(data.new_daily_profit).toFixed(2);
+                dpEl.className = `text-xs sm:text-sm font-black ${data.new_daily_profit >= 0 ? 'text-[#00ECB9]' : 'text-red-400'}`;
+
+                // Set chart bias to match server outcome
+                activeTradeBias = ((dir === 'CALL' && data.is_win) || (dir === 'PUT' && !data.is_win)) ? 1 : -1;
+
+                const log = document.getElementById('tradesLog');
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center bg-[#0B0E14] px-4 py-2 rounded-lg border border-white/5';
+                row.innerHTML = `<span><b>${currentAsset.symbol}</b> (${dir === 'CALL' ? '<span class="text-[#00ECB9]">صعود ▲</span>' : '<span class="text-red-400">هبوط ▼</span>'}) - الضربة: $${amt}</span><span class="text-[#F0B90B] font-bold">جاري التنفيذ (${duration}ث)...</span>`;
+                log.prepend(row);
+
+                setTimeout(() => {
+                    activeTradeBias = 0;
+                    if (data.is_win) {
+                        row.lastChild.className = 'text-[#00ECB9] font-black';
+                        row.lastChild.innerText = `رابحة +$${data.profit.toFixed(2)} ✓`;
+                        toast(`صفقة رابحة! ربحت +$${data.profit.toFixed(2)}`);
+                    } else {
+                        row.lastChild.className = 'text-[#FF4D4D] font-black';
+                        row.lastChild.innerText = `خاسرة -$${amt.toFixed(2)} ✕`;
+                        toast(`انتهت الصفقة بخسارة -$${amt.toFixed(2)}`, true);
+                    }
+                }, duration * 1000);
+            })
+            .catch(err => {
+                console.error(err);
+                toast('فشل الاتصال بالخادم.', true);
+            });
+        }
+
+        // Candlestick Chart Renderer
+        const canvas = document.getElementById('chartCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function initCandles() {
+            candles = [];
+            let p = currentPrice;
+            for (let i = 0; i < 40; i++) {
+                let open = p;
+                let close = open + (Math.random() - 0.48) * (open * 0.002);
+                let high = Math.max(open, close) + Math.random() * (open * 0.001);
+                let low = Math.min(open, close) - Math.random() * (open * 0.001);
+                candles.push({ open, close, high, low });
+                p = close;
+            }
+            currentPrice = p;
+        }
+
+        function drawChart() {
+            if (!canvas || !ctx) return;
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            for (let y = 40; y < canvas.height; y += 50) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            const highs = candles.map(c => c.high);
+            const lows = candles.map(c => c.low);
+            const maxP = Math.max(...highs);
+            const minP = Math.min(...lows);
+            const range = (maxP - minP) || 1;
+
+            const cw = (canvas.width - 60) / candles.length;
+            candles.forEach((c, i) => {
+                const x = i * cw + 20;
+                const yOpen = canvas.height - 40 - ((c.open - minP) / range) * (canvas.height - 80);
+                const yClose = canvas.height - 40 - ((c.close - minP) / range) * (canvas.height - 80);
+                const yHigh = canvas.height - 40 - ((c.high - minP) / range) * (canvas.height - 80);
+                const yLow = canvas.height - 40 - ((c.low - minP) / range) * (canvas.height - 80);
+
+                const isBull = c.close >= c.open;
+                ctx.strokeStyle = isBull ? '#00ECB9' : '#FF4D4D';
+                ctx.fillStyle = isBull ? '#00ECB9' : '#FF4D4D';
+
+                ctx.beginPath();
+                ctx.moveTo(x + cw / 2, yHigh);
+                ctx.lineTo(x + cw / 2, yLow);
+                ctx.stroke();
+
+                ctx.fillRect(x + 2, Math.min(yOpen, yClose), Math.max(cw - 4, 2), Math.max(Math.abs(yClose - yOpen), 3));
+            });
+        }
+
+        setInterval(() => {
+            if (!candles.length) return;
+            let last = candles[candles.length - 1];
+            let rand = (Math.random() - 0.5);
+            if (activeTradeBias === 1) rand = Math.abs(rand) + 0.25;
+            if (activeTradeBias === -1) rand = -Math.abs(rand) - 0.25;
+
+            let delta = rand * (currentPrice * 0.0007);
+            last.close += delta;
+            if (last.close > last.high) last.high = last.close;
+            if (last.close < last.low) last.low = last.close;
+            currentPrice = last.close;
+            document.getElementById('livePriceText').innerText = currentPrice > 100 ? currentPrice.toFixed(2) : currentPrice.toFixed(5);
+            drawChart();
+        }, 500);
+
+        setInterval(() => {
+            if (!candles.length) return;
+            candles.shift();
+            candles.push({ open: currentPrice, close: currentPrice, high: currentPrice, low: currentPrice });
+        }, 3500);
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            changeAsset();
+            setTimeout(drawChart, 100);
+        });
+    </script>
+</body>
+</html>

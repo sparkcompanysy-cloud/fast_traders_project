@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fast Traders | المنصة{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>body { font-family: 'Cairo', sans-serif; background-color: #0B0E14; color: #fff; }</style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row">
+
+    <!-- Server Messages & Dynamic JS Toast -->
+    <div id="toast" class="fixed top-5 left-5 z-[100] hidden"></div>
+    {% if messages %}
+    <div id="serverToastContainer" class="fixed top-5 left-5 right-5 sm:right-auto z-[90] space-y-2">
+        {% for message in messages %}
+        <div class="px-5 py-3 rounded-xl font-bold text-xs shadow-2xl flex items-center gap-2 {% if message.tags == 'error' %}bg-[#FF4D4D] text-white{% else %}bg-[#00ECB9] text-[#0B0E14]{% endif %}">
+            <i class="fa-solid {% if message.tags == 'error' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <script>setTimeout(() => { const el = document.getElementById('serverToastContainer'); if (el) el.remove(); }, 3800);</script>
+    {% endif %}
+
+    <!-- Mobile Top Header (Visible on Phones & Tablets) -->
+    <header class="lg:hidden sticky top-0 z-40 bg-[#121824] border-b border-white/10 px-4 py-3.5 flex justify-between items-center">
+        <a href="{% url 'index' %}" class="flex items-center gap-2 text-lg font-black">
+            <i class="fa-solid fa-bolt text-[#F0B90B] text-xl"></i> Fast<span class="text-[#00ECB9]">Traders</span>
+        </a>
+        <div class="flex items-center gap-3">
+            <div class="bg-[#0B0E14] border border-white/10 px-3 py-1 rounded-lg text-xs">
+                <span class="text-gray-400 ml-1">الرصيد:</span>
+                <b class="text-[#00ECB9]">${{ request.user.real_balance|floatformat:2 }}</b>
+            </div>
+            <button onclick="toggleSidebar()" class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-white text-lg">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Backdrop Overlay -->
+    <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 hidden lg:hidden"></div>
+
+    <!-- Responsive Sidebar (Drawer on Mobile, Fixed Column on Desktop) -->
+    <aside id="traderSidebar" class="fixed lg:static inset-y-0 right-0 z-50 w-64 bg-[#121824] border-l border-white/10 flex flex-col justify-between p-6 shrink-0 transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div>
+            <div class="flex items-center justify-between mb-10">
+                <a href="{% url 'index' %}" class="flex items-center gap-2 text-xl font-black">
+                    <i class="fa-solid fa-bolt text-[#F0B90B] text-2xl"></i> Fast<span class="text-[#00ECB9]">Traders</span>
+                </a>
+                <button onclick="toggleSidebar()" class="lg:hidden text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <nav class="space-y-2 text-sm font-bold">
+                <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition {% if active_nav == 'dashboard' %}bg-[#00ECB9]/10 text-[#00ECB9] border-r-4 border-[#00ECB9]{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i> لوحة التحكم
+                </a>
+                <a href="{% url 'terminal' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition {% if active_nav == 'terminal' %}bg-[#00ECB9]/10 text-[#00ECB9] border-r-4 border-[#00ECB9]{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-chart-line"></i> منصة التداول
+                </a>
+                <a href="{% url 'markets' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition {% if active_nav == 'markets' %}bg-[#00ECB9]/10 text-[#00ECB9] border-r-4 border-[#00ECB9]{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-globe"></i> استكشاف الأسواق
+                </a>
+                <a href="{% url 'wallet' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition {% if active_nav == 'wallet' %}bg-[#00ECB9]/10 text-[#00ECB9] border-r-4 border-[#00ECB9]{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-wallet"></i> المحفظة والأموال
+                </a>
+                <a href="{% url 'kyc' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl transition {% if active_nav == 'kyc' %}bg-[#00ECB9]/10 text-[#00ECB9] border-r-4 border-[#00ECB9]{% else %}text-gray-400 hover:bg-white/5 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-id-card"></i> توثيق الهوية (KYC)
+                </a>
+            </nav>
+        </div>
+
+        <div class="space-y-4 pt-6 border-t border-white/10">
+            <div class="bg-[#0B0E14] border border-white/10 p-3 rounded-xl text-xs">
+                {% if request.user.kyc_status == 'approved' %}
+                    <div class="text-[#00ECB9] font-bold mb-1"><i class="fa-solid fa-circle-check"></i> موثق رسمياً Tier 2</div>
+                {% elif request.user.kyc_status == 'pending' %}
+                    <div class="text-[#F0B90B] font-bold mb-1"><i class="fa-solid fa-clock"></i> قيد مراجعة التوثيق</div>
+                {% else %}
+                    <div class="text-[#F0B90B] font-bold mb-1"><i class="fa-solid fa-shield-halved"></i> المستوى الأساسي</div>
+                {% endif %}
+                <span class="text-gray-500 text-[11px]">حماية مشفرة 256-Bit</span>
+            </div>
+            <a href="{% url 'logout' %}" class="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 font-bold">
+                <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Page Content -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Global Image Preview Modal -->
+    <div id="imgModal" onclick="this.classList.add('hidden')" class="fixed inset-0 bg-black/85 z-50 hidden flex flex-col items-center justify-center p-4 sm:p-6 cursor-pointer">
+        <span class="text-xs text-gray-300 mb-3 bg-white/10 px-4 py-1.5 rounded-full">انقر في أي مكان لإغلاق المعاينة ✕</span>
+        <img id="modalImgEl" class="max-h-[82vh] max-w-[92vw] rounded-2xl border border-white/20 shadow-2xl">
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sb = document.getElementById('traderSidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            sb.classList.toggle('translate-x-full');
+            ov.classList.toggle('hidden');
+        }
+
+        function showImgModal(src) {
+            document.getElementById('modalImgEl').src = src;
+            document.getElementById('imgModal').classList.remove('hidden');
+        }
+
+        function toast(msg, isErr = false) {
+            const t = document.getElementById('toast');
+            t.className = `fixed top-5 left-5 z-[100] px-5 py-3 rounded-xl font-bold text-xs shadow-2xl flex items-center gap-2 ${isErr ? 'bg-[#FF4D4D] text-white' : 'bg-[#00ECB9] text-[#0B0E14]'}`;
+            t.innerHTML = `<i class="fa-solid ${isErr ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${msg}`;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 3000);
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

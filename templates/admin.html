@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Traders | مركز القيادة والتحكم المركزي (Admin Panel)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>body { font-family: 'Cairo', sans-serif; background-color: #0B0E14; color: #fff; }</style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row relative">
+
+    <div id="toast" class="fixed top-5 left-5 z-[100] hidden"></div>
+    {% if messages %}
+    <div id="serverToastContainer" class="fixed top-5 left-5 right-5 sm:right-auto z-[95] space-y-2">
+        {% for message in messages %}
+        <div class="px-5 py-3 rounded-xl font-bold text-xs shadow-2xl flex items-center gap-2 {% if message.tags == 'error' %}bg-red-500 text-white{% else %}bg-[#00ECB9] text-[#0B0E14]{% endif %}">
+            <i class="fa-solid {% if message.tags == 'error' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <script>setTimeout(() => { const el = document.getElementById('serverToastContainer'); if (el) el.remove(); }, 4000);</script>
+    {% endif %}
+
+    <!-- Mobile Top Header -->
+    <header class="lg:hidden sticky top-0 z-40 bg-[#121824] border-b border-white/10 px-4 py-3.5 flex justify-between items-center">
+        <div class="flex items-center gap-2 text-base font-black text-[#F0B90B]">
+            <i class="fa-solid fa-shield-halved"></i> Fast Traders Admin
+        </div>
+        <button onclick="toggleAdminSidebar()" class="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-white text-lg">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </header>
+
+    <!-- Mobile Backdrop -->
+    <div id="adminSidebarOverlay" onclick="toggleAdminSidebar()" class="fixed inset-0 bg-black/70 z-40 hidden lg:hidden"></div>
+
+    <!-- Admin Sidebar -->
+    <aside id="adminSidebar" class="fixed lg:static inset-y-0 right-0 z-50 w-72 bg-[#121824] border-l border-white/10 flex flex-col justify-between p-6 shrink-0 transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div>
+            <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center gap-2 text-lg font-black text-[#F0B90B]">
+                    <i class="fa-solid fa-shield-halved"></i> Fast Traders Admin
+                </div>
+                <button onclick="toggleAdminSidebar()" class="lg:hidden text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <nav class="space-y-2 text-xs font-bold">
+                <button onclick="openTab('codes', this)" id="btn-codes" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#F0B90B]/15 text-[#F0B90B]">
+                    <i class="fa-solid fa-key"></i> 1. توليد أكواد التفعيل (Codes)
+                </button>
+                <button onclick="openTab('users', this)" id="btn-users" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5">
+                    <i class="fa-solid fa-id-card"></i> 2. المستخدمين وتوثيق الهوية (KYC)
+                </button>
+                <button onclick="openTab('finance', this)" id="btn-finance" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5">
+                    <i class="fa-solid fa-sack-dollar"></i> 3. المحفظة والإيداعات والسحوبات
+                </button>
+                <button onclick="openTab('risk', this)" id="btn-risk" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5">
+                    <i class="fa-solid fa-crosshairs"></i> 4. محدد ربحية المستخدم (Profit Cap)
+                </button>
+                <button onclick="openTab('markets', this)" id="btn-markets" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5">
+                    <i class="fa-solid fa-sliders"></i> 5. إدارة الأزواج (إضافة/حذف/قفل)
+                </button>
+                <button onclick="openTab('trades', this)" id="btn-trades" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5">
+                    <i class="fa-solid fa-eye"></i> 6. مراقبة الصفقات المباشرة
+                </button>
+            </nav>
+        </div>
+
+        <div class="space-y-3 pt-4 border-t border-white/10">
+            <a href="{% url 'dashboard' %}" target="_blank" class="block text-xs text-gray-400 hover:text-white">
+                <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i> فتح واجهة المتداول في تبويب جديد
+            </a>
+            <a href="{% url 'admin_logout' %}" class="w-full py-2.5 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500 hover:text-white text-xs font-bold transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-lock"></i> قفل اللوحة وتسجيل الخروج
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-8 pb-4 border-b border-white/10">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black">مركز القيادة والتحكم المركزي (Admin Panel)</h1>
+                <p class="text-xs text-gray-400">مرحباً بك <b class="text-[#F0B90B]">{{ request.user.display_name }}</b> — جميع التعديلات تُحفظ في قاعدة البيانات فوراً.</p>
+            </div>
+            <span class="px-4 py-1.5 rounded-xl bg-[#00ECB9]/15 border border-[#00ECB9]/30 text-[#00ECB9] text-xs font-bold">متصل بقاعدة البيانات ⚡</span>
+        </div>
+
+        <!-- TAB 1: Activation Codes Generator (توليد أكواد التفعيل) -->
+        <section id="tab-codes" class="tab-sec space-y-6">
+            <div class="bg-[#121824] border border-[#F0B90B]/30 rounded-2xl p-5 sm:p-6">
+                <h3 class="font-bold text-base text-[#F0B90B] mb-2">
+                    <i class="fa-solid fa-key ml-1"></i> توليد أكواد التفعيل للمستخدمين الجدد (Generate Activation Codes)
+                </h3>
+                <p class="text-xs text-gray-400 mb-5">
+                    يتكون كل كود من 6 محارف (مثل <span class="font-mono text-[#00ECB9]">ABCDEF</span>)، ويُستخدم لتفعيل تسجيل مستخدم واحد فقط لمرة واحدة.
+                </p>
+
+                <form method="POST" action="{% url 'admin_generate_codes' %}" class="flex flex-wrap items-end gap-4">
+                    {% csrf_token %}
+                    <div class="w-full sm:w-64">
+                        <label class="text-xs text-gray-300 font-bold block mb-1.5">عدد الأكواد المراد توليدها (Quantity)</label>
+                        <input name="quantity" type="number" min="1" max="500" value="5" required class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-4 py-3 text-sm font-black text-[#00ECB9] focus:border-[#F0B90B] outline-none">
+                    </div>
+                    <button type="submit" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#F0B90B] text-[#0B0E14] font-black text-xs sm:text-sm hover:opacity-90 transition shadow-lg shadow-[#F0B90B]/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> توليد الأكواد الآن (Generate Codes)
+                    </button>
+                </form>
+            </div>
+
+            <!-- Unused Available Codes Grid -->
+            <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                    <h3 class="font-bold text-base text-[#00ECB9]">
+                        الأكواد المتاحة غير المستخدمة ({{ unused_codes.count }})
+                    </h3>
+                    {% if unused_codes %}
+                    <button type="button" onclick="copyAllUnusedCodes()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-[#00ECB9] hover:text-[#0B0E14] text-xs font-bold transition">
+                        <i class="fa-regular fa-copy ml-1"></i> نسخ جميع الأكواد المتاحة
+                    </button>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {% for c in unused_codes %}
+                    <div class="bg-[#0B0E14] border border-[#00ECB9]/30 rounded-xl p-3 flex items-center justify-between">
+                        <span class="unused-code-val font-mono font-black text-sm tracking-widest text-[#00ECB9]">{{ c.code }}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="copyText('{{ c.code }}')" class="text-gray-400 hover:text-white text-xs p-1" title="نسخ الكود">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                            <form method="POST" action="{% url 'admin_panel' %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_code">
+                                <input type="hidden" name="code_id" value="{{ c.id }}">
+                                <button type="submit" class="text-red-400/70 hover:text-red-400 text-xs p-1" title="حذف الكود">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-full py-6 text-center text-gray-500 text-xs">
+                        لا توجد أكواد متاحة حالياً. استخدم زر التوليد أعلاه لإنشاء أكواد جديدة.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Used Codes History -->
+            <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 overflow-x-auto">
+                <h3 class="font-bold text-base text-gray-300 mb-4">سجل الأكواد المستخدمة</h3>
+                <table class="w-full text-right text-xs min-w-[500px]">
+                    <thead class="text-gray-400 border-b border-white/10">
+                        <tr>
+                            <th class="pb-3">الكود</th>
+                            <th class="pb-3">المستخدم الذي فعّل الكود</th>
+                            <th class="pb-3">البريد الإلكتروني</th>
+                            <th class="pb-3">تاريخ الاستخدام</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for c in used_codes %}
+                        <tr>
+                            <td class="py-3 font-mono font-bold text-[#F0B90B]">{{ c.code }}</td>
+                            <td class="font-bold">{% if c.used_by %}#{{ c.used_by.id }} - {{ c.used_by.display_name }}{% else %}—{% endif %}</td>
+                            <td class="text-gray-400">{% if c.used_by %}{{ c.used_by.email }}{% else %}—{% endif %}</td>
+                            <td class="text-gray-400">{{ c.used_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="py-6 text-center text-gray-500">لم يتم استخدام أي كود بعد.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 2: Users & Complete KYC Details -->
+        <section id="tab-users" class="tab-sec hidden space-y-6">
+            <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 overflow-x-auto">
+                <h3 class="font-bold text-base text-[#F0B90B] mb-4">بيانات حسابات المتداولين والأرصدة المالية</h3>
+                <table class="w-full text-right text-xs min-w-[750px]">
+                    <thead class="text-gray-400 border-b border-white/10">
+                        <tr>
+                            <th class="pb-3">المعرف</th>
+                            <th class="pb-3">الاسم / البريد</th>
+                            <th class="pb-3">كود التفعيل</th>
+                            <th class="pb-3">الرصيد الحقيقي ($)</th>
+                            <th class="pb-3">إجمالي الإيداعات ($)</th>
+                            <th class="pb-3">حالة الحساب</th>
+                            <th class="pb-3">حفظ التعديل</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for u in traders %}
+                        <tr>
+                            <form method="POST" action="{% url 'admin_panel' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="update_user_balance">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <td class="py-3 font-bold">#{{ u.id }}</td>
+                                <td>
+                                    <b class="block">{{ u.display_name }}</b>
+                                    <span class="text-gray-400 text-[11px]">{{ u.email }}</span>
+                                </td>
+                                <td><span class="px-2 py-1 rounded bg-[#F0B90B]/15 text-[#F0B90B] font-mono font-bold">{{ u.activation_code|default:"—" }}</span></td>
+                                <td>
+                                    <input name="real_balance" type="number" step="0.01" value="{{ u.real_balance|floatformat:2 }}" class="bg-[#0B0E14] border border-white/15 rounded-lg px-3 py-1.5 w-28 text-[#00ECB9] font-black">
+                                </td>
+                                <td>
+                                    <input name="total_deposited" type="number" step="0.01" value="{{ u.total_deposited|floatformat:2 }}" class="bg-[#0B0E14] border border-white/15 rounded-lg px-3 py-1.5 w-28 text-[#F0B90B] font-black">
+                                </td>
+                                <td>
+                                    <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" name="is_banned" {% if u.is_banned %}checked{% endif %} class="accent-red-500">
+                                        <span class="{% if u.is_banned %}text-red-400 font-bold{% else %}text-gray-400{% endif %}">تجميد</span>
+                                    </label>
+                                </td>
+                                <td>
+                                    <button type="submit" class="px-4 py-1.5 rounded-lg bg-[#00ECB9] text-[#0B0E14] font-black hover:opacity-90">حفظ</button>
+                                </td>
+                            </form>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="py-6 text-center text-gray-500">لا يوجد متداولين مسجلين بعد.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- KYC Submissions List -->
+            <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-6">
+                <div>
+                    <h3 class="font-bold text-base text-[#00ECB9]"><i class="fa-solid fa-id-card-clip ml-1"></i> مراجعة بيانات وصور توثيق الهوية المرسلة من العملاء (KYC)</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">انقر على صور الهوية لتكبيرها، ثم اضغط قبول أو رفض ليظهر القرار فوراً لدى العميل.</p>
+                </div>
+
+                {% for kyc in kyc_list %}
+                <div class="bg-[#0B0E14] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4">
+                    <div class="flex flex-wrap justify-between items-center gap-2 border-b border-white/10 pb-3">
+                        <span class="font-black text-sm text-white">العميل: #{{ kyc.user.id }} - {{ kyc.user.display_name }} ({{ kyc.user.email }})</span>
+                        {% if kyc.user.kyc_status == 'approved' %}
+                            <span class="px-3 py-1 rounded-lg bg-[#00ECB9] text-[#0B0E14] font-black text-xs">موثق ✓</span>
+                        {% elif kyc.user.kyc_status == 'pending' %}
+                            <span class="px-3 py-1 rounded-lg bg-[#F0B90B]/20 text-[#F0B90B] font-black text-xs">بانتظار المراجعة ⏳</span>
+                        {% else %}
+                            <span class="px-3 py-1 rounded-lg bg-red-500/20 text-red-400 font-black text-xs">مرفوض ✕</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 items-center">
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between border-b border-white/5 pb-2"><span class="text-gray-400">الاسم الكامل في الوثيقة:</span><b class="text-white">{{ kyc.full_name }}</b></div>
+                            <div class="flex justify-between border-b border-white/5 pb-2"><span class="text-gray-400">تاريخ الميلاد:</span><b class="text-[#00ECB9]">{{ kyc.dob|date:"Y-m-d" }}</b></div>
+                            <div class="flex justify-between border-b border-white/5 pb-2"><span class="text-gray-400">العنوان السكني:</span><b class="text-white">{{ kyc.address }}</b></div>
+                            <div class="flex justify-between border-b border-white/5 pb-2"><span class="text-gray-400">رقم الوثيقة / الهوية:</span><b class="text-[#F0B90B] font-mono">{{ kyc.doc_number }}</b></div>
+                            <div class="flex justify-between"><span class="text-gray-400">وقت الإرسال:</span><span class="text-gray-300">{{ kyc.submitted_at|date:"Y-m-d H:i" }}</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div class="bg-[#121824] p-3 rounded-xl border border-white/10">
+                                <span class="text-[11px] text-gray-400 block mb-2">الوجه الأمامي للهوية</span>
+                                <img src="{{ kyc.front_id_img.url }}" onclick="showModalImage(this.src)" class="h-28 mx-auto rounded-lg object-cover cursor-pointer border border-[#00ECB9]/40 hover:scale-105 transition">
+                            </div>
+                            <div class="bg-[#121824] p-3 rounded-xl border border-white/10">
+                                <span class="text-[11px] text-gray-400 block mb-2">الوجه الخلفي للهوية</span>
+                                <img src="{{ kyc.back_id_img.url }}" onclick="showModalImage(this.src)" class="h-28 mx-auto rounded-lg object-cover cursor-pointer border border-[#00ECB9]/40 hover:scale-105 transition">
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{% url 'admin_panel' %}" class="flex justify-end gap-3 pt-3 border-t border-white/10">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="kyc_decision">
+                        <input type="hidden" name="user_id" value="{{ kyc.user.id }}">
+                        <button type="submit" name="decision" value="approved" class="px-5 py-2 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-xs hover:opacity-90">قبول التوثيق ✓</button>
+                        <button type="submit" name="decision" value="rejected" class="px-5 py-2 rounded-xl bg-red-500 text-white font-bold text-xs hover:opacity-90">رفض التوثيق ✕</button>
+                    </form>
+                </div>
+                {% empty %}
+                <div class="py-8 text-center text-gray-500 text-xs">لم يقم أي عميل برفع وثائق توثيق الهوية حتى الآن.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- TAB 3: Finance & Deposit Wallet Address Control -->
+        <section id="tab-finance" class="tab-sec hidden space-y-6">
+            <form method="POST" action="{% url 'admin_panel' %}" class="bg-[#121824] border border-[#F0B90B]/30 rounded-2xl p-5 sm:p-6 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_wallets">
+                <h3 class="font-bold text-base text-[#F0B90B]"><i class="fa-solid fa-wallet ml-1"></i> إعدادات عناوين محافظ الإيداع الرسمية للمنصة (USDT)</h3>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">عنوان محفظة USDT (TRC20)</label>
+                        <input name="wallet_trc20" type="text" value="{{ platform_settings.deposit_wallet_trc20 }}" required class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-4 py-2.5 text-xs font-mono text-[#00ECB9] outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 block mb-1">عنوان محفظة USDT (BEP20)</label>
+                        <input name="wallet_bep20" type="text" value="{{ platform_settings.deposit_wallet_bep20 }}" required class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-4 py-2.5 text-xs font-mono text-[#00ECB9] outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="px-6 py-3 rounded-xl bg-[#F0B90B] text-[#0B0E14] font-black text-xs hover:opacity-90">
+                    <i class="fa-solid fa-floppy-disk ml-1"></i> حفظ وتحديث عناوين المحافظ فوراً
+                </button>
+            </form>
+
+            <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 overflow-x-auto">
+                <h3 class="font-bold text-base text-[#00ECB9] mb-4">طلبات الإيداع والسحب ومعاينة إيصالات الدفع</h3>
+                <table class="w-full text-right text-xs min-w-[650px]">
+                    <thead class="text-gray-400 border-b border-white/10">
+                        <tr>
+                            <th class="pb-3">المستخدم</th>
+                            <th class="pb-3">العملية</th>
+                            <th class="pb-3">المبلغ</th>
+                            <th class="pb-3">إيصال الدفع / العنوان</th>
+                            <th class="pb-3">الحالة</th>
+                            <th class="pb-3">قرار الإدارة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for tx in transactions %}
+                        <tr>
+                            <td class="py-3 font-bold">{{ tx.user.display_name }} (#{{ tx.user.id }})</td>
+                            <td>
+                                <span class="px-2 py-0.5 rounded {% if tx.tx_type == 'إيداع' %}bg-[#00ECB9]/15 text-[#00ECB9]{% else %}bg-[#F0B90B]/15 text-[#F0B90B]{% endif %} font-bold">
+                                    {{ tx.tx_type }} ({{ tx.network }})
+                                </span>
+                            </td>
+                            <td class="font-black text-sm">${{ tx.amount|floatformat:2 }}</td>
+                            <td>
+                                {% if tx.proof_image %}
+                                    <button type="button" onclick="showModalImage('{{ tx.proof_image.url }}')" class="text-[#F0B90B] underline font-bold">معاينة صورة الإيصال 📷</button>
+                                {% else %}
+                                    <span class="font-mono text-gray-300">{{ tx.wallet_address }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="font-bold {% if tx.status == 'مكتمل' %}text-[#00ECB9]{% elif tx.status == 'مرفوض' %}text-red-400{% else %}text-[#F0B90B]{% endif %}">
+                                {{ tx.status }}
+                            </td>
+                            <td>
+                                {% if tx.status == 'قيد المراجعة' %}
+                                <form method="POST" action="{% url 'admin_panel' %}" class="inline-flex gap-1.5">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="resolve_tx">
+                                    <input type="hidden" name="tx_id" value="{{ tx.id }}">
+                                    <button type="submit" name="decision" value="approve" class="px-3 py-1.5 rounded-lg bg-[#00ECB9] text-[#0B0E14] font-black">قبول ✓</button>
+                                    <button type="submit" name="decision" value="reject" class="px-3 py-1.5 rounded-lg bg-red-500 text-white font-bold">رفض ✕</button>
+                                </form>
+                                {% else %}
+                                <span class="text-gray-500 font-bold">تمت المعالجة ✓</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-6 text-center text-gray-500">لا توجد طلبات إيداع أو سحب حالياً.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 4: User Profit Cap Modulator -->
+        <section id="tab-risk" class="tab-sec hidden space-y-6">
+            <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 overflow-x-auto">
+                <h3 class="font-bold text-lg text-[#F0B90B] mb-1">🎯 محدد ربحية المستخدم اليومي (User Profit Cap Modulator)</h3>
+                <p class="text-xs text-gray-400 mb-5">تحكم في سقف الربح اليومي ونمط المخاطر لكل متداول على حدة.</p>
+
+                <table class="w-full text-right text-xs min-w-[800px]">
+                    <thead class="text-gray-400 border-b border-white/10">
+                        <tr>
+                            <th class="pb-3">المتداول</th>
+                            <th class="pb-3">إجمالي إيداعه</th>
+                            <th class="pb-3">ربحه اليوم</th>
+                            <th class="pb-3">نوع السقف</th>
+                            <th class="pb-3">قيمة السقف ($ أو %)</th>
+                            <th class="pb-3">نمط التحكم (Risk Mode)</th>
+                            <th class="pb-3">الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for u in traders %}
+                        <tr>
+                            <form method="POST" action="{% url 'admin_panel' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="save_risk">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <td class="py-3 font-bold">#{{ u.id }} - {{ u.display_name }}</td>
+                                <td class="text-[#F0B90B] font-bold">${{ u.total_deposited|floatformat:2 }}</td>
+                                <td class="font-bold {% if u.daily_profit >= 0 %}text-[#00ECB9]{% else %}text-red-400{% endif %}">
+                                    ${{ u.daily_profit|floatformat:2 }}
+                                </td>
+                                <td>
+                                    <select name="cap_type" class="bg-[#0B0E14] border border-white/15 rounded-lg px-2.5 py-1.5 font-bold">
+                                        <option value="fixed" {% if u.cap_type == 'fixed' %}selected{% endif %}>مبلغ ثابت ($)</option>
+                                        <option value="percent" {% if u.cap_type == 'percent' %}selected{% endif %}>نسبة من الإيداع (%)</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input name="profit_cap" type="number" step="0.5" value="{{ u.profit_cap|floatformat:2 }}" class="bg-[#0B0E14] border border-white/15 rounded-lg px-3 py-1.5 w-24 font-black text-[#00ECB9]">
+                                </td>
+                                <td>
+                                    <select name="risk_mode" class="bg-[#0B0E14] border border-white/15 rounded-lg px-2.5 py-1.5 font-bold">
+                                        <option value="capped" {% if u.risk_mode == 'capped' %}selected{% endif %}>تفعيل سقف الربح (Capped)</option>
+                                        <option value="house_edge" {% if u.risk_mode == 'house_edge' %}selected{% endif %}>خسارة دائمة (House Edge)</option>
+                                        <option value="standard" {% if u.risk_mode == 'standard' %}selected{% endif %}>عشوائي مفتوح</option>
+                                    </select>
+                                </td>
+                                <td class="space-x-1 space-x-reverse">
+                                    <button type="submit" name="sub_action" value="save" class="px-3 py-1.5 rounded-lg bg-[#F0B90B] text-[#0B0E14] font-black">حفظ</button>
+                                    <button type="submit" name="sub_action" value="reset_daily" class="px-2.5 py-1.5 rounded-lg bg-white/10 text-white font-bold" title="تصفير ربح اليوم">تصفير اليوم</button>
+                                </td>
+                            </form>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="py-6 text-center text-gray-500">لا يوجد متداولين مسجلين بعد.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 5: Markets Control -->
+        <section id="tab-markets" class="tab-sec hidden space-y-6">
+            <form method="POST" action="{% url 'admin_panel' %}" class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_asset">
+                <h3 class="font-bold text-base text-[#00ECB9] mb-4"><i class="fa-solid fa-plus-circle ml-1"></i> إضافة زوج عملات أو أصل جديد للمنصة</h3>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">رمز الزوج (Symbol)</label>
+                        <input name="symbol" type="text" required placeholder="GBP/USD" class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-3 py-2 text-xs font-bold uppercase">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">اسم الزوج بالعربي</label>
+                        <input name="name" type="text" required placeholder="إسترليني / دولار" class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-3 py-2 text-xs">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">الفئة</label>
+                        <select name="category" class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-3 py-2 text-xs">
+                            <option value="فوركس">فوركس</option>
+                            <option value="عملات رقمية">عملات رقمية</option>
+                            <option value="معادن">معادن</option>
+                            <option value="أسهم">أسهم</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">نسبة الربحية (%)</label>
+                        <input name="payout" type="number" value="90" required class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-3 py-2 text-xs font-bold text-[#00ECB9]">
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">الحد الأدنى للإيداع ($)</label>
+                        <input name="min_deposit" type="number" value="500" required class="w-full bg-[#0B0E14] border border-white/15 rounded-xl px-3 py-2 text-xs font-bold text-[#F0B90B]">
+                    </div>
+                    <button type="submit" class="py-2.5 px-4 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-xs hover:opacity-90">+ إضافة الزوج</button>
+                </div>
+            </form>
+
+            <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 overflow-x-auto">
+                <h3 class="font-bold text-base text-[#F0B90B] mb-4">🌐 التحكم بالأزواج الحالية</h3>
+                <table class="w-full text-right text-xs min-w-[700px]">
+                    <thead class="text-gray-400 border-b border-white/10">
+                        <tr>
+                            <th class="pb-3">زوج العملات</th>
+                            <th class="pb-3">الفئة</th>
+                            <th class="pb-3">الحد الأدنى للإيداع ($)</th>
+                            <th class="pb-3">نسبة الربحية (%)</th>
+                            <th class="pb-3">حالة القفل</th>
+                            <th class="pb-3">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for a in assets %}
+                        <tr>
+                            <form method="POST" action="{% url 'admin_panel' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="asset_id" value="{{ a.id }}">
+                                <td class="py-3 font-black text-sm">{{ a.symbol }} <span class="text-[11px] text-gray-400 font-normal block">{{ a.name }}</span></td>
+                                <td>{{ a.category }}</td>
+                                <td><input name="min_deposit" type="number" step="1" value="{{ a.min_deposit|floatformat:0 }}" class="bg-[#0B0E14] border border-white/15 rounded-lg px-3 py-1.5 w-28 font-black text-[#F0B90B]"></td>
+                                <td><input name="payout" type="number" value="{{ a.payout }}" class="bg-[#0B0E14] border border-white/15 rounded-lg px-3 py-1.5 w-20 font-black text-[#00ECB9]"></td>
+                                <td>
+                                    <button type="submit" name="action" value="toggle_lock_asset" class="px-3 py-1.5 rounded-lg font-bold {% if a.locked_by_admin %}bg-red-500/20 text-red-400{% else %}bg-[#00ECB9]/15 text-[#00ECB9]{% endif %}">
+                                        {% if a.locked_by_admin %}🔒 مقفول (فك القفل){% else %}🔓 مفتوح (قفل الزوج){% endif %}
+                                    </button>
+                                </td>
+                                <td class="space-x-1 space-x-reverse">
+                                    <button type="submit" name="action" value="update_asset" class="px-3 py-1.5 rounded-lg bg-[#00ECB9] text-[#0B0E14] font-black">حفظ</button>
+                                    <button type="submit" name="action" value="delete_asset" class="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white font-bold transition">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </td>
+                            </form>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 6: Live Trades Monitor -->
+        <section id="tab-trades" class="tab-sec hidden">
+            <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 overflow-x-auto">
+                <h3 class="font-bold text-base text-[#00ECB9] mb-4">مراقبة صفقات العملاء المباشرة</h3>
+                <table class="w-full text-right text-xs min-w-[600px]">
+                    <thead class="text-gray-400 border-b border-white/10">
+                        <tr>
+                            <th class="pb-3">المستخدم</th>
+                            <th class="pb-3">الزوج</th>
+                            <th class="pb-3">الحساب</th>
+                            <th class="pb-3">الاتجاه</th>
+                            <th class="pb-3">المبلغ</th>
+                            <th class="pb-3">النتيجة</th>
+                            <th class="pb-3">الوقت</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for t in trades %}
+                        <tr>
+                            <td class="py-2.5 font-bold">#{{ t.user.id }} - {{ t.user.display_name }}</td>
+                            <td class="font-bold">{{ t.symbol }}</td>
+                            <td><span class="px-2 py-0.5 rounded bg-white/5">{{ t.account_type|upper }}</span></td>
+                            <td>{% if t.direction == 'CALL' %}<span class="text-[#00ECB9] font-bold">صعود ▲</span>{% else %}<span class="text-red-400 font-bold">هبوط ▼</span>{% endif %}</td>
+                            <td>${{ t.amount|floatformat:2 }}</td>
+                            <td class="font-bold {% if t.is_win %}text-[#00ECB9]{% else %}text-red-400{% endif %}">
+                                {% if t.is_win %}+${{ t.result_amount|floatformat:2 }}{% else %}-${{ t.amount|floatformat:2 }}{% endif %}
+                            </td>
+                            <td class="text-gray-400">{{ t.created_at|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="py-6 text-center text-gray-500">لا توجد صفقات منفذة بعد.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Fullscreen Image Viewer Modal -->
+    <div id="adminImgModal" onclick="this.classList.add('hidden')" class="fixed inset-0 bg-black/85 z-50 hidden flex flex-col items-center justify-center p-6 cursor-pointer">
+        <span class="text-xs text-gray-300 mb-3 bg-white/10 px-4 py-1.5 rounded-full">انقر في أي مكان لإغلاق المعاينة ✕</span>
+        <img id="adminModalImg" class="max-h-[82vh] max-w-[90vw] rounded-2xl border-2 border-[#F0B90B] shadow-2xl">
+    </div>
+
+    <script>
+        function toggleAdminSidebar() {
+            document.getElementById('adminSidebar').classList.toggle('translate-x-full');
+            document.getElementById('adminSidebarOverlay').classList.toggle('hidden');
+        }
+
+        function showModalImage(src) {
+            document.getElementById('adminModalImg').src = src;
+            document.getElementById('adminImgModal').classList.remove('hidden');
+        }
+
+        function toast(msg, isErr = false) {
+            const t = document.getElementById('toast');
+            t.className = `fixed top-5 left-5 z-[100] px-5 py-3 rounded-xl font-bold text-xs shadow-2xl flex items-center gap-2 ${isErr ? 'bg-red-500 text-white' : 'bg-[#00ECB9] text-[#0B0E14]'}`;
+            t.innerHTML = `<i class="fa-solid ${isErr ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${msg}`;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2800);
+        }
+
+        function openTab(id, btn) {
+            document.querySelectorAll('.tab-sec').forEach(s => s.classList.add('hidden'));
+            document.getElementById('tab-' + id).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.className = 'tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-white/5';
+            });
+            btn.className = 'tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#F0B90B]/15 text-[#F0B90B]';
+            localStorage.setItem('fast_traders_admin_tab', id);
+        }
+
+        function copyText(txt) {
+            navigator.clipboard.writeText(txt);
+            toast(`تم نسخ الكود: ${txt}`);
+        }
+
+        function copyAllUnusedCodes() {
+            const codes = Array.from(document.querySelectorAll('.unused-code-val')).map(el => el.innerText.trim());
+            if (!codes.length) return;
+            navigator.clipboard.writeText(codes.join('\n'));
+            toast(`تم نسخ جميع الأكواد المتاحة (${codes.length} كود)!`);
+        }
+
+        // Restore active tab after form submit
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTab = localStorage.getItem('fast_traders_admin_tab');
+            if (savedTab && document.getElementById('tab-' + savedTab)) {
+                openTab(savedTab, document.getElementById('btn-' + savedTab));
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Traders | تداول الأصول العالمية بأقصى سرعة وأمان</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #0B0E14; color: #fff; }
+        .glow-green { box-shadow: 0 0 25px rgba(0, 236, 185, 0.25); }
+        .card-bg { background: linear-gradient(145deg, #121824 0%, #0E131D 100%); border: 1px solid rgba(255,255,255,0.07); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Navbar -->
+    <header class="sticky top-0 z-50 bg-[#0B0E14]/90 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 lg:px-16 py-4">
+        <div class="flex justify-between items-center">
+            <a href="{% url 'index' %}" class="flex items-center gap-2 text-xl sm:text-2xl font-black text-white">
+                <i class="fa-solid fa-bolt text-[#F0B90B] text-2xl sm:text-3xl"></i> Fast<span class="text-[#00ECB9]">Traders</span>
+            </a>
+
+            <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-gray-400">
+                <a href="{% url 'markets' %}" class="hover:text-[#00ECB9] transition">الأسواق</a>
+                <a href="{% url 'terminal' %}" class="hover:text-[#00ECB9] transition">منصة التداول</a>
+                <a href="{% url 'wallet' %}" class="hover:text-[#00ECB9] transition">المحفظة</a>
+                <a href="{% url 'kyc' %}" class="hover:text-[#00ECB9] transition">توثيق الهوية</a>
+            </nav>
+
+            <div class="hidden sm:flex items-center gap-3">
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="px-5 py-2 rounded-xl bg-[#00ECB9] text-[#0B0E14] text-sm font-black glow-green hover:opacity-90 transition">لوحة التحكم</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="px-4 py-2 rounded-xl border border-white/15 text-sm font-bold hover:border-[#00ECB9] transition">تسجيل الدخول</a>
+                    <a href="{% url 'register' %}" class="px-4 py-2 rounded-xl bg-[#00ECB9] text-[#0B0E14] text-sm font-black glow-green hover:opacity-90 transition">حساب جديد</a>
+                {% endif %}
+            </div>
+
+            <!-- Mobile Hamburger Button -->
+            <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="md:hidden text-gray-300 hover:text-white text-xl p-2">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+
+        <!-- Collapsible Mobile Menu -->
+        <div id="mobileMenu" class="hidden md:hidden mt-4 pt-4 border-t border-white/10 space-y-3">
+            <div class="grid grid-cols-2 gap-2 text-xs font-bold text-gray-300">
+                <a href="{% url 'markets' %}" class="p-2.5 rounded-xl bg-white/5 hover:text-[#00ECB9]"><i class="fa-solid fa-globe ml-1"></i> الأسواق</a>
+                <a href="{% url 'terminal' %}" class="p-2.5 rounded-xl bg-white/5 hover:text-[#00ECB9]"><i class="fa-solid fa-chart-line ml-1"></i> التيرمنال</a>
+                <a href="{% url 'wallet' %}" class="p-2.5 rounded-xl bg-white/5 hover:text-[#00ECB9]"><i class="fa-solid fa-wallet ml-1"></i> المحفظة</a>
+                <a href="{% url 'kyc' %}" class="p-2.5 rounded-xl bg-white/5 hover:text-[#00ECB9]"><i class="fa-solid fa-id-card ml-1"></i> التوثيق</a>
+            </div>
+            <div class="flex gap-2 pt-2">
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="w-full text-center py-2.5 rounded-xl bg-[#00ECB9] text-[#0B0E14] text-xs font-black">الذهاب للوحة التحكم</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="flex-1 text-center py-2.5 rounded-xl border border-white/15 text-xs font-bold">تسجيل الدخول</a>
+                    <a href="{% url 'register' %}" class="flex-1 text-center py-2.5 rounded-xl bg-[#00ECB9] text-[#0B0E14] text-xs font-black">حساب جديد</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Live Ticker Bar -->
+    <div class="bg-[#121824] border-b border-white/5 px-4 sm:px-6 lg:px-16 py-2.5 flex items-center gap-8 overflow-x-auto text-xs whitespace-nowrap">
+        <span class="text-gray-500 font-bold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#00ECB9] animate-ping"></span> مباشر:</span>
+        {% for asset in assets %}
+        <div class="flex items-center gap-2">
+            <b class="text-white">{{ asset.symbol }}</b>
+            <span class="text-gray-300">${{ asset.base_price }}</span>
+            <span class="text-[#00ECB9] font-bold">+{{ asset.payout }}% عائد</span>
+        </div>
+        {% empty %}
+        <div class="flex items-center gap-2"><i class="fa-brands fa-bitcoin text-[#F0B90B]"></i> <b>BTC/USDT</b> <span class="text-gray-300">$67,432.80</span> <span class="text-[#00ECB9] font-bold">+90%</span></div>
+        {% endfor %}
+    </div>
+
+    <!-- Hero Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-12 lg:py-24 grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
+        <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0B90B]/10 border border-[#F0B90B]/30 text-[#F0B90B] text-xs font-bold mb-6">
+                <i class="fa-solid fa-bolt"></i> الجيل الجديد من منصات الخيارات الثنائية — Fast Traders
+            </div>
+            <h1 class="text-3xl sm:text-4xl lg:text-6xl font-black leading-tight mb-6">
+                تداول الأصول العالمية <span class="text-[#00ECB9]">بأقصى سرعة</span> وأمان مطلق
+            </h1>
+            <p class="text-gray-400 text-sm sm:text-lg mb-8 leading-relaxed">
+                العملات الرقمية، الفوركس، والمعادن الثمينة في منصة واحدة فائقة القوة. نفّذ صفقاتك بدقة متناهية وتحكم كامل في كل عقد عبر Fast Traders.
+            </p>
+            <div class="flex flex-wrap gap-4 mb-8">
+                <a href="{% if request.user.is_authenticated %}{% url 'terminal' %}{% else %}{% url 'register' %}{% endif %}" class="w-full sm:w-auto justify-center px-8 py-4 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-sm sm:text-base glow-green hover:opacity-90 transition flex items-center gap-2">
+                    ابدأ التداول مجاناً <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <a href="{% url 'terminal' %}" class="w-full sm:w-auto justify-center px-8 py-4 rounded-xl card-bg text-white font-bold text-sm sm:text-base hover:border-[#00ECB9] transition flex items-center gap-2">
+                    استعراض التيرمنال <i class="fa-solid fa-chart-line text-[#00ECB9]"></i>
+                </a>
+            </div>
+            <div class="flex flex-wrap items-center gap-6 text-xs text-gray-400">
+                <span><i class="fa-solid fa-shield-halved text-[#00ECB9] ml-1"></i> تشفير بنكي 256-Bit</span>
+                <span><i class="fa-solid fa-bolt text-[#00ECB9] ml-1"></i> عوائد تصل إلى 92%</span>
+            </div>
+        </div>
+
+        <!-- Hero Live Chart Preview Card -->
+        <div class="card-bg rounded-2xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
+            <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-[#F0B90B]/20 flex items-center justify-center text-[#F0B90B] text-xl"><i class="fa-brands fa-bitcoin"></i></div>
+                    <div>
+                        <h3 class="font-bold text-sm">BTC / USDT</h3>
+                        <span class="text-xs text-gray-400">عائد الخيارات +90%</span>
+                    </div>
+                </div>
+                <div class="text-left">
+                    <div class="text-lg sm:text-xl font-black text-white">$67,432.80</div>
+                    <div class="text-xs text-[#00ECB9]">+$1,612.40 (+2.45%)</div>
+                </div>
+            </div>
+            <svg viewBox="0 0 500 180" class="w-full h-36 sm:h-44 overflow-visible">
+                <defs>
+                    <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#00ECB9" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="#00ECB9" stop-opacity="0.0"/>
+                    </linearGradient>
+                </defs>
+                <path d="M0,150 L40,140 L80,145 L120,115 L160,125 L200,95 L240,105 L280,75 L320,85 L360,55 L400,65 L440,35 L500,20 L500,180 L0,180 Z" fill="url(#chartGrad)"/>
+                <path d="M0,150 L40,140 L80,145 L120,115 L160,125 L200,95 L240,105 L280,75 L320,85 L360,55 L400,65 L440,35 L500,20" fill="none" stroke="#00ECB9" stroke-width="3"/>
+                <circle cx="500" cy="20" r="5" fill="#00ECB9" class="animate-ping"/>
+                <circle cx="500" cy="20" r="5" fill="#00ECB9"/>
+            </svg>
+            <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5 text-sm">
+                <div><span class="text-gray-400 text-xs block">حجم التداول (24 ساعة)</span><b class="text-base sm:text-lg">$14.2B</b></div>
+                <div><span class="text-gray-400 text-xs block">سرعة تنفيذ العقود</span><b class="text-base sm:text-lg text-[#00ECB9]">&lt;10ms</b></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-16 py-12 lg:py-16">
+        <div class="mb-10">
+            <span class="text-[#00ECB9] text-xs font-bold uppercase tracking-widest">مصممة لتفوقك</span>
+            <h2 class="text-2xl sm:text-3xl font-black mt-1">أداء مؤسسي بدون أي تنازلات.</h2>
+        </div>
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="card-bg p-6 sm:p-7 rounded-2xl hover:border-[#00ECB9]/50 transition">
+                <div class="w-12 h-12 rounded-xl bg-[#00ECB9]/10 text-[#00ECB9] flex items-center justify-center text-xl mb-5"><i class="fa-solid fa-shield-cat"></i></div>
+                <h3 class="text-xl font-bold mb-2">أمان بمستوى البنوك</h3>
+                <p class="text-gray-400 text-sm leading-relaxed mb-6">تشفير متعدد الطبقات، حفظ بارد للأصول، وحماية متكاملة لحسابك في كل لحظة.</p>
+                <span class="text-xs text-[#00ECB9] font-bold">حماية في كل طبقة • 24/7</span>
+            </div>
+            <div class="card-bg p-6 sm:p-7 rounded-2xl border-[#00ECB9]/40 glow-green">
+                <div class="w-12 h-12 rounded-xl bg-[#00ECB9]/10 text-[#00ECB9] flex items-center justify-center text-xl mb-5"><i class="fa-solid fa-bolt-lightning"></i></div>
+                <h3 class="text-xl font-bold mb-2">تنفيذ فوري للأوامر</h3>
+                <p class="text-gray-400 text-sm leading-relaxed mb-6">تحرك بسرعة السوق. محرك المطابقة الفائق ينفذ عقودك بدون أي تأخير سعري.</p>
+                <span class="text-lg text-[#00ECB9] font-black">&lt;10ms سرعة الاستجابة</span>
+            </div>
+            <div class="card-bg p-6 sm:p-7 rounded-2xl hover:border-[#00ECB9]/50 transition">
+                <div class="w-12 h-12 rounded-xl bg-[#00ECB9]/10 text-[#00ECB9] flex items-center justify-center text-xl mb-5"><i class="fa-solid fa-percent"></i></div>
+                <h3 class="text-xl font-bold mb-2">أعلى عوائد في السوق</h3>
+                <p class="text-gray-400 text-sm leading-relaxed mb-6">احتفظ بأكبر قدر من أرباحك مع تسعير شفاف وعوائد تصل إلى 92% لكل صفقة ناجحة.</p>
+                <span class="text-xs text-white font-bold">رسوم تبدأ من 0.05%</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 bg-[#080B10] py-8 px-4 sm:px-6 lg:px-16 text-center text-xs text-gray-500">
+        © 2026 Fast Traders (fast-traders.com). جميع الحقوق محفوظة.
+    </footer>
+</body>
+</html>

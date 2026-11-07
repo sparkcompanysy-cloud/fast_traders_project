@@ -1,0 +1,116 @@
+{% extends 'base_trader.html' %}
+{% block title %}Fast Traders | لوحة التحكم{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap justify-between items-center gap-4 mb-8 pb-5 border-b border-white/10">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-black">لوحة التحكم والملف المالي</h1>
+        <p class="text-xs text-gray-400 mt-1">
+            معرف الحساب: <span class="text-[#00ECB9] font-bold">#{{ request.user.id }}</span> |
+            كود التفعيل المسجل: <span class="text-[#F0B90B] font-mono font-bold">{{ request.user.activation_code|default:"—" }}</span>
+        </p>
+    </div>
+    <div class="flex items-center gap-3 sm:gap-4">
+        <div class="text-left">
+            <div class="text-sm font-bold">{{ request.user.display_name }}</div>
+            {% if request.user.kyc_status == 'approved' %}
+                <span class="text-[11px] px-2.5 py-0.5 rounded bg-[#00ECB9]/20 text-[#00ECB9] font-bold inline-block mt-1">حساب موثق بالكامل ✓</span>
+            {% elif request.user.kyc_status == 'pending' %}
+                <span class="text-[11px] px-2.5 py-0.5 rounded bg-[#F0B90B]/20 text-[#F0B90B] font-bold inline-block mt-1">قيد مراجعة الإدارة ⏳</span>
+            {% elif request.user.kyc_status == 'rejected' %}
+                <span class="text-[11px] px-2.5 py-0.5 rounded bg-red-500/20 text-red-400 font-bold inline-block mt-1">التوثيق مرفوض ✕</span>
+            {% else %}
+                <span class="text-[11px] px-2.5 py-0.5 rounded bg-white/10 text-gray-400 font-bold inline-block mt-1">غير موثق (Tier 1)</span>
+            {% endif %}
+        </div>
+        <div class="w-10 h-10 rounded-full bg-[#00ECB9] text-[#0B0E14] font-black flex items-center justify-center">
+            {{ request.user.display_name|slice:":1" }}
+        </div>
+    </div>
+</div>
+
+<!-- 4 Financial Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
+    <div class="bg-[#121824] border border-white/10 rounded-2xl p-5">
+        <span class="text-xs text-gray-400">الرصيد الحقيقي (Real)</span>
+        <div class="text-2xl font-black text-[#00ECB9] my-1">${{ request.user.real_balance|floatformat:2 }}</div>
+        <span class="text-[11px] text-gray-500">متاح للتداول والسحب</span>
+    </div>
+    <div class="bg-[#121824] border border-white/10 rounded-2xl p-5">
+        <span class="text-xs text-gray-400">الرصيد التجريبي (Demo)</span>
+        <div class="text-2xl font-black text-white my-1">${{ request.user.demo_balance|floatformat:2 }}</div>
+        <span class="text-[11px] text-gray-500">للتدريب وتجربة الاستراتيجيات</span>
+    </div>
+    <div class="bg-[#121824] border border-white/10 rounded-2xl p-5">
+        <span class="text-xs text-gray-400">إجمالي الإيداعات المعتمدة</span>
+        <div class="text-2xl font-black text-[#F0B90B] my-1">${{ request.user.total_deposited|floatformat:2 }}</div>
+        <span class="text-[11px] text-gray-500">يحدد مستوى فتح الأزواج</span>
+    </div>
+    <div class="bg-[#121824] border border-white/10 rounded-2xl p-5">
+        <span class="text-xs text-gray-400">صافي ربح اليوم</span>
+        <div class="text-2xl font-black my-1 {% if request.user.daily_profit >= 0 %}text-[#00ECB9]{% else %}text-red-400{% endif %}">
+            {% if request.user.daily_profit >= 0 %}+${{ request.user.daily_profit|floatformat:2 }}{% else %}-${{ request.user.daily_profit|floatformat:2|cut:"-" }}{% endif %}
+        </div>
+        <span class="text-[11px] text-gray-500">يتحدث مع كل صفقة</span>
+    </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-base">آخر الصفقات المنفذة</h3>
+            <a href="{% url 'terminal' %}" class="text-xs text-[#00ECB9] font-bold hover:underline">الذهاب للتيرمنال ←</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-sm min-w-[420px]">
+                <thead class="text-xs text-gray-400 border-b border-white/10">
+                    <tr>
+                        <th class="pb-3">الزوج</th>
+                        <th class="pb-3">النوع</th>
+                        <th class="pb-3">المبلغ</th>
+                        <th class="pb-3">النتيجة</th>
+                        <th class="pb-3">الوقت</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for t in recent_trades %}
+                    <tr class="text-xs">
+                        <td class="py-3 font-bold">{{ t.symbol }}</td>
+                        <td class="{% if t.direction == 'CALL' %}text-[#00ECB9]{% else %}text-red-400{% endif %} font-bold">
+                            {% if t.direction == 'CALL' %}صعود ▲{% else %}هبوط ▼{% endif %}
+                        </td>
+                        <td>${{ t.amount|floatformat:2 }}</td>
+                        <td class="font-bold {% if t.is_win %}text-[#00ECB9]{% else %}text-red-400{% endif %}">
+                            {% if t.is_win %}+${{ t.result_amount|floatformat:2 }}{% else %}-${{ t.amount|floatformat:2 }}{% endif %}
+                        </td>
+                        <td class="text-gray-400">{{ t.created_at|date:"H:i:s" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="py-6 text-center text-gray-500 text-xs">لا توجد صفقات منفذة بعد.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 flex flex-col justify-between">
+        <div>
+            <h3 class="font-bold text-base mb-2">إجراءات الحساب السريعة</h3>
+            <p class="text-xs text-gray-400 mb-6">قم بإيداع الرصيد لفتح أزواج العملات وتوثيق هويتك لرفع سقف السحوبات.</p>
+            <div class="space-y-3">
+                <a href="{% url 'terminal' %}" class="w-full py-3 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition">
+                    <i class="fa-solid fa-bolt"></i> بدء التداول اللحظي
+                </a>
+                <a href="{% url 'wallet' %}" class="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-circle-plus text-[#00ECB9]"></i> إيداع رصيد USDT
+                </a>
+                <a href="{% url 'kyc' %}" class="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-shield-halved text-[#F0B90B]"></i> توثيق الهوية (KYC)
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

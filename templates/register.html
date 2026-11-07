@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Traders | إنشاء حساب جديد</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>body { font-family: 'Cairo', sans-serif; background-color: #0B0E14; color: #fff; }</style>
+</head>
+<body class="min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 relative">
+
+    {% if messages %}
+    <div id="toastContainer" class="fixed top-5 left-5 right-5 sm:right-auto z-50 space-y-2">
+        {% for message in messages %}
+        <div class="px-5 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 {% if message.tags == 'error' %}bg-red-500 text-white{% else %}bg-[#00ECB9] text-[#0B0E14]{% endif %}">
+            <i class="fa-solid {% if message.tags == 'error' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <script>setTimeout(() => { const el = document.getElementById('toastContainer'); if (el) el.remove(); }, 4000);</script>
+    {% endif %}
+
+    <div class="w-full max-w-md bg-[#121824] border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
+        <div class="flex justify-between items-center mb-6">
+            <a href="{% url 'index' %}" class="flex items-center gap-2 text-xl font-black">
+                <i class="fa-solid fa-bolt text-[#F0B90B] text-2xl"></i> Fast<span class="text-[#00ECB9]">Traders</span>
+            </a>
+            <a href="{% url 'index' %}" class="text-xs text-gray-400 hover:text-white transition">
+                <i class="fa-solid fa-arrow-right ml-1"></i> الرئيسية
+            </a>
+        </div>
+
+        <h1 class="text-xl sm:text-2xl font-black mb-1">أنشئ حسابك التداولي</h1>
+        <p class="text-xs text-gray-400 mb-6">احصل على حساب تجريبي بقيمة $10,000 فور التسجيل في Fast Traders.</p>
+
+        <form method="POST" action="{% url 'register' %}" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="text-xs text-gray-400 block mb-1.5">الاسم الكامل</label>
+                <div class="relative">
+                    <i class="fa-regular fa-user absolute right-3.5 top-3.5 text-gray-500 text-sm"></i>
+                    <input name="full_name" type="text" value="{{ form.full_name.value|default:'' }}" required placeholder="مثال: رامي خالد المنصور" class="w-full bg-[#0B0E14] border border-white/10 rounded-xl pr-10 pl-4 py-3 text-sm focus:border-[#00ECB9] outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs text-gray-400 block mb-1.5">البريد الإلكتروني</label>
+                <div class="relative">
+                    <i class="fa-regular fa-envelope absolute right-3.5 top-3.5 text-gray-500 text-sm"></i>
+                    <input name="email" type="email" value="{{ form.email.value|default:'' }}" required placeholder="name@example.com" class="w-full bg-[#0B0E14] border border-white/10 rounded-xl pr-10 pl-4 py-3 text-sm focus:border-[#00ECB9] outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs text-gray-400 block mb-1.5">كلمة المرور</label>
+                <div class="relative">
+                    <i class="fa-solid fa-lock absolute right-3.5 top-3.5 text-gray-500 text-sm"></i>
+                    <input name="password" type="password" required minlength="6" placeholder="••••••••" class="w-full bg-[#0B0E14] border border-white/10 rounded-xl pr-10 pl-4 py-3 text-sm focus:border-[#00ECB9] outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs text-[#F0B90B] font-bold block mb-1.5">كود التفعيل الخاص بك (6 أحرف - يُطلب من الإدارة *)</label>
+                <div class="relative">
+                    <i class="fa-solid fa-key absolute right-3.5 top-3.5 text-[#F0B90B] text-sm"></i>
+                    <input name="activation_code" type="text" maxlength="6" minlength="6" value="{{ form.activation_code.value|default:'' }}" required placeholder="مثال: ABCDEF" oninput="this.value = this.value.toUpperCase()" class="w-full bg-[#0B0E14] border border-[#F0B90B]/40 rounded-xl pr-10 pl-4 py-3 text-sm font-mono tracking-widest uppercase text-[#F0B90B] font-bold focus:border-[#00ECB9] outline-none">
+                </div>
+                <span class="text-[11px] text-gray-500 mt-1 block">الكود صالح لتفعيل حساب واحد فقط لمرة واحدة.</span>
+            </div>
+            <button type="submit" class="w-full py-3.5 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-sm hover:opacity-90 transition shadow-lg shadow-[#00ECB9]/20">
+                تفعيل الحساب والدخول للمنصة
+            </button>
+        </form>
+
+        <p class="text-center text-xs text-gray-400 mt-6">
+            لديك حساب بالفعل؟ <a href="{% url 'login' %}" class="text-[#00ECB9] font-bold hover:underline">تسجيل الدخول</a>
+        </p>
+    </div>
+</body>
+</html>

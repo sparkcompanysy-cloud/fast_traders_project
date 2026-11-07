@@ -1,0 +1,179 @@
+{% extends 'base_trader.html' %}
+{% block title %}Fast Traders | توثيق الهوية (KYC){% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6 pb-4 border-b border-white/10">
+    <div>
+        <h1 class="text-xl sm:text-2xl font-black">توثيق الهوية والحساب (Identity Verification)</h1>
+        <p class="text-xs text-gray-400">أكمل خطوات التحقق لرفع حدود السحب اليومية وتأمين حسابك في Fast Traders.</p>
+    </div>
+    {% if request.user.kyc_status == 'approved' %}
+        <span class="px-4 py-2 rounded-xl bg-[#00ECB9] text-[#0B0E14] text-xs font-black shadow-lg shadow-[#00ECB9]/25">حساب موثق بالكامل ✓ (Tier 2 Approved)</span>
+    {% elif request.user.kyc_status == 'pending' %}
+        <span class="px-4 py-2 rounded-xl bg-[#F0B90B]/20 text-[#F0B90B] text-xs font-black">قيد مراجعة الإدارة ⏳</span>
+    {% elif request.user.kyc_status == 'rejected' %}
+        <span class="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-xs font-black">تم رفض التوثيق ✕</span>
+    {% else %}
+        <span class="px-4 py-2 rounded-xl bg-white/10 text-gray-300 text-xs font-bold">غير موثق (Tier 1)</span>
+    {% endif %}
+</div>
+
+<!-- Dynamic Status Alert Banner -->
+{% if request.user.kyc_status == 'approved' %}
+<div class="mb-6 p-5 rounded-2xl border border-[#00ECB9]/40 bg-[#00ECB9]/10 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-[#00ECB9] text-[#0B0E14] flex items-center justify-center text-2xl font-black shrink-0"><i class="fa-solid fa-check-double"></i></div>
+        <div>
+            <h3 class="font-black text-sm sm:text-base text-[#00ECB9]">تهانينا! تم قبول وتوثيق هويتك بنجاح من قبل الإدارة</h3>
+            <p class="text-xs text-gray-300 mt-0.5">تم تفعيل المستوى الثاني (Tier 2) لحسابك ورفع سقف السحب اليومي إلى $100,000.</p>
+        </div>
+    </div>
+    <span class="px-3 py-1 rounded-lg bg-[#00ECB9] text-[#0B0E14] text-xs font-black">موثق ✓</span>
+</div>
+{% elif request.user.kyc_status == 'pending' %}
+<div class="mb-6 p-5 rounded-2xl border border-[#F0B90B]/40 bg-[#F0B90B]/10 flex items-center gap-3">
+    <i class="fa-solid fa-clock text-2xl text-[#F0B90B]"></i>
+    <div>
+        <h3 class="font-bold text-sm text-[#F0B90B]">طلب التوثيق قيد المراجعة لدى الإدارة</h3>
+        <p class="text-xs text-gray-300">تم إرسال بياناتك وصور الهوية بنجاح، ستتحدث حالة حسابك فور مراجعة الإدارة.</p>
+    </div>
+</div>
+{% elif request.user.kyc_status == 'rejected' %}
+<div class="mb-6 p-5 rounded-2xl border border-red-500/40 bg-red-500/10 flex items-center justify-between">
+    <div class="text-xs text-red-300 font-bold"><i class="fa-solid fa-circle-xmark ml-2"></i> تم رفض طلب التوثيق من الإدارة. يرجى التحقق من البيانات والصور وإعادة الإرسال.</div>
+</div>
+{% endif %}
+
+<!-- 3-Tier Progress Bar -->
+<div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 mb-6">
+    <div class="flex flex-wrap justify-between items-center gap-2 mb-6">
+        <span class="text-xs font-bold text-gray-300">مستوى تقدم التوثيق</span>
+        <span class="text-xs text-[#00ECB9] font-bold">الحد اليومي بعد التوثيق: $100,000 / يوم</span>
+    </div>
+    <div class="grid grid-cols-3 text-center relative mb-4">
+        <div>
+            <div class="w-9 h-9 rounded-full bg-[#00ECB9] text-[#0B0E14] flex items-center justify-center mx-auto font-black mb-2"><i class="fa-solid fa-check"></i></div>
+            <b class="text-[11px] sm:text-xs block">Tier 1: الأساسي</b>
+        </div>
+        <div>
+            {% if request.user.kyc_status == 'approved' %}
+                <div class="w-9 h-9 rounded-full bg-[#00ECB9] text-[#0B0E14] flex items-center justify-center mx-auto font-black mb-2 shadow-lg shadow-[#00ECB9]/30"><i class="fa-solid fa-check"></i></div>
+            {% else %}
+                <div class="w-9 h-9 rounded-full bg-[#00ECB9]/20 border-2 border-[#00ECB9] text-[#00ECB9] flex items-center justify-center mx-auto font-black mb-2"><i class="fa-solid fa-id-card"></i></div>
+            {% endif %}
+            <b class="text-[11px] sm:text-xs block text-[#00ECB9]">Tier 2: توثيق الهوية</b>
+        </div>
+        <div>
+            <div class="w-9 h-9 rounded-full bg-[#0B0E14] border border-white/15 text-gray-500 flex items-center justify-center mx-auto font-black mb-2"><i class="fa-solid fa-building-columns"></i></div>
+            <b class="text-[11px] sm:text-xs block text-gray-400">Tier 3: المتقدم</b>
+        </div>
+    </div>
+    <div class="w-full bg-[#0B0E14] h-2.5 rounded-full overflow-hidden">
+        <div class="h-full transition-all duration-500 {% if request.user.kyc_status == 'approved' %}bg-[#00ECB9] w-full{% elif request.user.kyc_status == 'pending' %}bg-[#F0B90B] w-2/3{% else %}bg-[#00ECB9] w-1/3{% endif %}"></div>
+    </div>
+</div>
+
+<!-- Form Area -->
+<div class="grid lg:grid-cols-3 gap-6">
+    <form method="POST" action="{% url 'kyc' %}" enctype="multipart/form-data" class="lg:col-span-2 space-y-6">
+        {% csrf_token %}
+        <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6">
+            <h3 class="font-bold text-sm mb-4"><i class="fa-regular fa-user text-[#00ECB9] ml-1"></i> البيانات الشخصية الرسمية</h3>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="text-xs text-gray-400 block mb-1">الاسم الكامل (كما في الهوية أو جواز السفر)</label>
+                    <input name="full_name" type="text" required value="{{ kyc_doc.full_name|default:request.user.display_name }}" placeholder="مثال: رامي خالد المنصور" class="w-full bg-[#0B0E14] border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:border-[#00ECB9] outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">تاريخ الميلاد</label>
+                    <input name="dob" type="date" required value="{{ kyc_doc.dob|date:'Y-m-d'|default:'1995-06-15' }}" class="w-full bg-[#0B0E14] border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:border-[#00ECB9] outline-none">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">العنوان السكني (الدولة - المدينة)</label>
+                    <input name="address" type="text" required value="{{ kyc_doc.address|default:'' }}" placeholder="مثال: الإمارات - دبي" class="w-full bg-[#0B0E14] border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:border-[#00ECB9] outline-none">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="text-xs text-gray-400 block mb-1">رقم الوثيقة / الرقم الوطني</label>
+                    <input name="doc_number" type="text" required value="{{ kyc_doc.doc_number|default:'' }}" placeholder="مثال: A98765432" class="w-full bg-[#0B0E14] border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:border-[#00ECB9] outline-none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Upload -->
+        <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 sm:p-6 space-y-4">
+            <h3 class="font-bold text-sm"><i class="fa-solid fa-file-shield text-[#00ECB9] ml-1"></i> رفع صور الهوية الرسمية (الأمامية والخلفية)</h3>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">صورة الوجه الأمامي للهوية</label>
+                    <input type="file" id="frontInput" name="front_id_img" accept="image/*" class="hidden" onchange="handleDocPreview(event, 'front')">
+                    <div onclick="document.getElementById('frontInput').click()" class="border-2 border-dashed border-white/15 hover:border-[#00ECB9] rounded-xl p-4 text-center cursor-pointer bg-[#0B0E14] transition">
+                        {% if kyc_doc and kyc_doc.front_id_img %}
+                            <img id="frontPreview" src="{{ kyc_doc.front_id_img.url }}" class="max-h-28 mx-auto rounded mb-2">
+                            <i id="frontIcon" class="fa-solid fa-id-badge text-2xl text-[#00ECB9] mb-1 hidden"></i>
+                            <p id="frontText" class="text-xs text-[#00ECB9] font-bold">تم إرفاق الوجه الأمامي ✓</p>
+                        {% else %}
+                            <img id="frontPreview" class="max-h-28 mx-auto rounded mb-2 hidden">
+                            <i id="frontIcon" class="fa-solid fa-id-badge text-2xl text-[#00ECB9] mb-1"></i>
+                            <p id="frontText" class="text-xs text-gray-400">انقر لرفع الوجه الأمامي</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">صورة الوجه الخلفي للهوية</label>
+                    <input type="file" id="backInput" name="back_id_img" accept="image/*" class="hidden" onchange="handleDocPreview(event, 'back')">
+                    <div onclick="document.getElementById('backInput').click()" class="border-2 border-dashed border-white/15 hover:border-[#00ECB9] rounded-xl p-4 text-center cursor-pointer bg-[#0B0E14] transition">
+                        {% if kyc_doc and kyc_doc.back_id_img %}
+                            <img id="backPreview" src="{{ kyc_doc.back_id_img.url }}" class="max-h-28 mx-auto rounded mb-2">
+                            <i id="backIcon" class="fa-solid fa-id-badge text-2xl text-[#00ECB9] mb-1 hidden"></i>
+                            <p id="backText" class="text-xs text-[#00ECB9] font-bold">تم إرفاق الوجه الخلفي ✓</p>
+                        {% else %}
+                            <img id="backPreview" class="max-h-28 mx-auto rounded mb-2 hidden">
+                            <i id="backIcon" class="fa-solid fa-id-badge text-2xl text-[#00ECB9] mb-1"></i>
+                            <p id="backText" class="text-xs text-gray-400">انقر لرفع الوجه الخلفي</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if request.user.kyc_status == 'approved' %}
+                <div class="w-full py-3.5 rounded-xl bg-[#00ECB9]/20 text-[#00ECB9] border border-[#00ECB9]/40 font-black text-sm text-center">
+                    الحساب موثق بالكامل ✓
+                </div>
+            {% else %}
+                <button type="submit" class="w-full py-3.5 rounded-xl bg-[#00ECB9] text-[#0B0E14] font-black text-sm hover:opacity-90 transition">
+                    {% if request.user.kyc_status == 'pending' %}تحديث وإعادة إرسال الوثائق{% else %}إرسال البيانات والوثائق للإدارة للمراجعة{% endif %}
+                </button>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="space-y-6">
+        <div class="bg-[#121824] border border-white/10 rounded-2xl p-5 text-xs space-y-2 text-gray-400">
+            <h4 class="font-bold text-white text-sm mb-2">تعليمات التوثيق</h4>
+            <p><i class="fa-solid fa-check text-[#00ECB9] ml-1"></i> تظهر جميع الحقول والصور مباشرة في لوحة تحكم الإدارة فور الإرسال.</p>
+            <p><i class="fa-solid fa-bolt text-[#00ECB9] ml-1"></i> بمجرد اعتماد الإدارة لوثائقك، تتحول حالة حسابك إلى الموثق رسمياً (Tier 2).</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function handleDocPreview(e, type) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const img = document.getElementById(type + 'Preview');
+            img.src = evt.target.result;
+            img.classList.remove('hidden');
+            document.getElementById(type + 'Icon').classList.add('hidden');
+            const txt = document.getElementById(type + 'Text');
+            txt.innerText = type === 'front' ? 'تم إرفاق الوجه الأمامي ✓' : 'تم إرفاق الوجه الخلفي ✓';
+            txt.className = 'text-xs text-[#00ECB9] font-bold';
+        };
+        reader.readAsDataURL(file);
+    }
+</script>
+{% endblock %}
